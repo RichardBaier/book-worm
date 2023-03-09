@@ -5,7 +5,8 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "watch": "nodemon server.js"
+    "watch": "nodemon server.js",
+    "seed": "node seeders/seed.js"
   },
   "keywords": [],
   "author": "",
@@ -16,7 +17,7 @@
     "apollo-server-express": "^3.6.2",
     "express": "^4.17.2",
     "graphql": "^16.3.0",
-    "mongoose": "^6.1.8"
+    "mongoose": "^6.1.8"  
   },
   "devDependencies": {
     "nodemon": "^2.0.3"
