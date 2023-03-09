@@ -1,21 +1,37 @@
-const { User, Book } = require('../models');
 const { AuthenticationError } = require('apollo-server-express');
+const { User } = require('../models');
 const { signToken } = require('../utils/auth');
-
 const resolvers = {
     Query: {
         me: async (parent, args, context) => {
             if (context.user) {
-                const userData = await User.findOne({ _id: context.user._id })
-                .select('-__v -password')
-                return userData;
+              return User.findOne({ _id: context.user._id }).populate('savedBooks');
             }
-            throw new AuthenticationError('Not logged in');
-        }
+            throw new AuthenticationError('You need to be logged in!');
+          },
     },
+    // Query: {
+    //   users: async () => {
+    //     return User.find().populate('savedBooks');
+    //   },
+    //   user: async (parent, { username }) => {
+    //     return User.findOne({ username }).populate('savedBooks');
+    //   },
+    //   me: async (parent, args, context) => {
+    //     if (context.user) {
+    //       return User.findOne({ _id: context.user._id }).populate('savedBooks');
+    //     }
+    //     throw new AuthenticationError('You need to be logged in!');
+    //   },
+    // },
+
     Mutation: {
-        //Allows the user to login and and authenticate themselves
-        login: async (parent, { email, password }) => {
+        addUser: async (parent, { username, email, password }) => {
+            const user = await User.create({ username, email, password });
+            const token = signToken(user);
+            return { token, user };
+          },
+          login: async (parent, { email, password }) => {
             const user = await User.findOne({ email });
       
             if (!user) {
@@ -32,36 +48,31 @@ const resolvers = {
       
             return { token, user };
           },
-        // Creates the user if it doesn't already exist
-        addUser: async (parent, { username, email, password }) => {
-            const user = await User.create({ username, email, password });
-            const token = signToken(user);
-            return { token, user };
-          },
-        // Deletes books
-        removeBook: async (parent, { bookId }, context) => {
-            if (context.user) {
-                const updatedUser = await User.findOneAndUpdate(
-                    {_id: context.user._id},
-                    { $pull: { savedBooks: { bookId: bookId } } },
-                    { new: true }
-                )
-                return updatedUser;
-            }
-        },
-        // Saves the books
-        saveBook: async (parent, { book }, context) => {
+          saveBook: async (parent, { input }, context) => {
             if (context.user) {
                 const updatedUser = await User.findOneAndUpdate(
                     { _id: context.user._id },
-                    { $addToSet: {savedBooks: book} },
-                    { new: true }
-                )
-                return updatedUser;
+                    { $addToSet: { savedBooks: input } },
+                    {
+                         new: true,
+                         runValidators: true,                    
+                    }
+                    );       
+                    return updatedUser;         
             }
-            throw new AuthenticationError('You need to be logged in!')
-        }
+            throw new AuthenticationError('You need to be logged in!');
+          },
+          removeBook: async (parent, args, context) => {
+            if (context.user) {
+                const updatedUser = await User.findOneAndUpdate(
+                    { _id: context.user._id },
+                    { $pull: { savedBooks: { bookId: args.bookId } } },
+                    { new: true }
+                    ); 
+                    return updatedUser;
+          }
+          throw new AuthenticationError('You need to be logged in!');
     }
-  };
-  
-  module.exports = resolvers;
+}};
+
+module.exports = resolvers;
